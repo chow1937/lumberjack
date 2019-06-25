@@ -107,12 +107,22 @@ type Logger struct {
 	// using gzip. The default is not to perform compression.
 	Compress bool `json:"compress" yaml:"compress"`
 
+	// BackupNameFunc function to get backup filename
+	BackupNameFunc BackupNameFunc
+
 	size int64
 	file *os.File
 	mu   sync.Mutex
 
 	millCh    chan bool
 	startMill sync.Once
+}
+
+// BackupNameFunc backup filename function type
+type BackupNameFunc func(name string, local bool) string
+
+func defaultTimeFormatFunc(t time.Time) string {
+	return t.Format(backupTimeFormat)
 }
 
 var (
@@ -218,7 +228,7 @@ func (l *Logger) openNew() error {
 		// Copy the mode off the old logfile.
 		mode = info.Mode()
 		// move the existing file
-		newname := backupName(name, l.LocalTime)
+		newname := l.backupName(name, l.LocalTime)
 		if err := os.Rename(name, newname); err != nil {
 			return fmt.Errorf("can't rename log file: %s", err)
 		}
@@ -239,6 +249,16 @@ func (l *Logger) openNew() error {
 	l.file = f
 	l.size = 0
 	return nil
+}
+
+// backupName creates a new filename from the given name, inserting a timestamp
+// between the filename and the extension, using the local time if requested
+// (otherwise UTC).
+func (l *Logger) backupName(name string, local bool) string {
+	if l.BackupNameFunc == nil {
+		return backupName(name, local)
+	}
+	return l.BackupNameFunc(name, local)
 }
 
 // backupName creates a new filename from the given name, inserting a timestamp
