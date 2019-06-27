@@ -110,6 +110,9 @@ type Logger struct {
 	// BackupNameFunc function to get backup filename
 	BackupNameFunc BackupNameFunc
 
+	// BackupTimeFormat backup file time format
+	BackupTimeFormat string
+
 	size int64
 	file *os.File
 	mu   sync.Mutex
@@ -458,7 +461,12 @@ func (l *Logger) timeFromName(filename, prefix, ext string) (time.Time, error) {
 		return time.Time{}, errors.New("mismatched extension")
 	}
 	ts := filename[len(prefix) : len(filename)-len(ext)]
-	return time.Parse(backupTimeFormat, ts)
+
+	timeFormat := l.BackupTimeFormat
+	if timeFormat == "" {
+		timeFormat = backupTimeFormat
+	}
+	return time.Parse(timeFormat, ts)
 }
 
 // max returns the maximum size in bytes of log files before rolling.
