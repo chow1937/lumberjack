@@ -113,6 +113,9 @@ type Logger struct {
 	// BackupTimeFormat backup file time format
 	BackupTimeFormat string
 
+	// BackupSep ...
+	BackupSep string
+
 	size int64
 	file *os.File
 	mu   sync.Mutex
@@ -433,6 +436,9 @@ func (l *Logger) oldLogFiles() ([]logInfo, error) {
 		if f.IsDir() {
 			continue
 		}
+		if f.Name() == filepath.Base(l.filename()) {
+			continue
+		}
 		if t, err := l.timeFromName(f.Name(), prefix, ext); err == nil {
 			logFiles = append(logFiles, logInfo{t, f})
 			continue
@@ -487,7 +493,11 @@ func (l *Logger) dir() string {
 func (l *Logger) prefixAndExt() (prefix, ext string) {
 	filename := filepath.Base(l.filename())
 	ext = filepath.Ext(filename)
-	prefix = filename[:len(filename)-len(ext)] + "-"
+	sep := l.BackupSep
+	if sep == "" {
+		sep = "-"
+	}
+	prefix = filename[:len(filename)-len(ext)] + sep
 	return prefix, ext
 }
 
